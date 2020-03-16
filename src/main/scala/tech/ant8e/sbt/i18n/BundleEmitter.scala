@@ -6,8 +6,12 @@ import com.typesafe.config.{Config, ConfigUtil}
 import tech.ant8e.sbt.i18n.BundleEmitter.Param._
 import tech.ant8e.sbt.i18n.BundleEmitter._
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.util.Try
+
+case class MissingKeyInfo(key: String, missingKeys: Set[String])
+
 case class BundleEmitter(config: Config, packageName: String) {
 
   val languages =
@@ -24,14 +28,25 @@ case class BundleEmitter(config: Config, packageName: String) {
 
   val tree = buildTree()
 
-  def emit(): String =
-    s"""package $packageName
+  def emit(): (String, Seq[MissingKeyInfo]) = {
+    val out = s"""package $packageName
        |
        |object Bundle {
        | ${emitStructure()}
        | ${languages.map(emitValues).mkString("\n")}
        |}
      """.stripMargin
+    (out, findMissingKey())
+  }
+
+  def findMissingKey(): Seq[MissingKeyInfo] = {
+    @tailrec
+    def findMissingKey_(acc: List[MissingKeyInfo], b: Branch): List[MissingKeyInfo] = {
+//      b.children
+    }
+
+    findMissingKey_(List.empty, tree)
+  }
 
   private[i18n] def translationKeysOf(c: Config): Set[String] =
     c.entrySet()

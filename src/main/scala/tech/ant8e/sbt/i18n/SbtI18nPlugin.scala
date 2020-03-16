@@ -19,6 +19,8 @@ object SbtI18nPlugin extends AutoPlugin {
     val generateI18NBundleTask =
       taskKey[Seq[File]]("The i18n bundle generation task.")
 
+    val i18nFailOnMissingKey = settingKey[Boolean]("fail the build if a translation is missing.")
+
   }
 
   import autoImport._
@@ -30,6 +32,7 @@ object SbtI18nPlugin extends AutoPlugin {
       watchSourceSettings ++
         Seq(
           i18nSource := sourceDirectory.value / "i18n",
+          i18nFailOnMissingKey := false,
           generateI18NBundleTask := generateFromSource(streams.value,
                                                        i18nSource.value,
                                                        sourceManaged.value / "sbt-i18n",
@@ -42,7 +45,8 @@ object SbtI18nPlugin extends AutoPlugin {
   def generateFromSource(streams: TaskStreams,
                          srcDir: sbt.File,
                          outDir: File,
-                         packageName: String): Seq[File] = {
+                         packageName: String,
+                         failOnMissingKey: Boolean): Seq[File] = {
 
     def parseSourceFile(f: File) =
       Try { ConfigFactory.parseFile(f).resolve() }.recoverWith {
@@ -63,7 +67,8 @@ object SbtI18nPlugin extends AutoPlugin {
           case (acc, (_, config)) => acc.withFallback(config)
         }
 
-    IO.write(bundleFile, BundleEmitter(fullConfig, packageName).emit())
+    val (str, missingKeys) = BundleEmitter(fullConfig, packageName).emit()
+    IO.write(bundleFile, str)
     Seq(bundleFile)
   }
 
